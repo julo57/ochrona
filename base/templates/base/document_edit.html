@@ -1,0 +1,16 @@
+
+
+<h2>Edit Document</h2>
+
+<!-- Link do pobrania oryginalnego pliku -->
+{% if document.file %}
+  <p><a href="{{ document.file.url }}" download>Download original file</a></p>
+{% endif %}
+
+<!-- Formularz do zastępowania pliku -->
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Upload new version</button>
+</form>
+

@@ -1,0 +1,15 @@
+<h1>IT Department</h1>
+<p>Welcome to the IT department portal. Here you can find IT-related resources.</p>
+
+<h2>Documents</h2>
+<ul>
+    {% for document in documents %}
+    <li>
+        {{ document.title }} - <a href="{{ document.file.url }}">Download</a>
+      <a href="{% url 'document_replace' document.id %}">Zastąp</a>
+
+    </li>
+    {% empty %}
+    <li>No documents available.</li>
+    {% endfor %}
+</ul>

@@ -1,0 +1,47 @@
+{% if request.session.user_id %}
+    
+    <p>Imię: {{ request.session.username }}</p>
+    <p>Jesteś zalogowany.</p>
+    <a href="{% url 'logout' %}">Wyloguj się</a>
+
+    <p>Dokumenty: <a href="{% url 'documents' %}">przeglądaj</a></p>
+    <p>Upload dokumentów: <a href="{% url 'document_upload' %}">upload</a></p>
+    <!-- Poprawiony przycisk/link do przeglądania folderów -->
+    <p>Przeglądaj foldery: <a href="{% url 'folders' %}" class="btn btn-info">Foldery</a></p>
+
+{% else %}
+    <form class="login-form" method="post" action="{% url 'home' %}">
+        {% csrf_token %}
+        <h2>Zaloguj się</h2>
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary btn-ghost">Zaloguj się</button>
+        <p>Nie masz konta? <a href="{% url 'register' %}">Zarejestruj się</a></p>
+    </form>
+{% endif %}
+
+{% if request.session.role == 'superadmin' %}
+    <a href="{% url 'admin_panel' %}" class="btn btn-primary">Panel Administracyjny</a>
+    <p>Witaj, Superadministratorze! Tutaj jest Panel sterowania.</p>
+{% elif request.session.role == 'admin' %}
+    <p>Witaj, Administratorze! Tutaj są Twoje narzędzia administracyjne.</p>
+{% elif request.session.role == 'manager' %}
+    <p>Witaj, Managerze! Oto Twoje raporty i narzędzia zarządzania.</p>
+{% elif request.session.role == 'employee' %}
+    <p>Witaj, Pracowniku! Oto Twoje zasoby.</p>
+{% elif request.session.role == 'user' %}
+    <p>Witaj, Użytkowniku! Oto Twoje zasoby.</p>
+{% else %}
+    <p>Witaj, Gościu! Oto Twoje dostępne zasoby.</p>
+{% endif %}
+
+<!-- Przesunięcie pętli for poza blok sprawdzający sesję, aby uniknąć powtórzeń -->
+{% for folder in folders %}
+    <div>
+        <h2>{{ folder }}</h2>
+        {% if folder == user_department %}
+            <p>Masz dostęp do tego folderu. <a href="{% url 'folder_detail' folder %}">Przeglądaj</a></p>
+        {% else %}
+            <p>Dostęp zabroniony.</p>
+        {% endif %}
+    </div>
+{% endfor %}

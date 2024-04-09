@@ -1,0 +1,8 @@
+<form class="login-form" method="post" >
+    {% csrf_token %}
+    <h2>Zaloguj sie</h2>
+    {{ form.as_p }} 
+    <button type="submit" class="btn btn-primary btn-ghost">Zaloguj sie</button>
+    <p>Nie masz konta? <a href="{% url 'home' %}">Zaloguj sie</a></p>
+</form>
+</form>

@@ -1,0 +1,17 @@
+<h1>HR Department</h1>
+<p>Welcome to the HR department portal. Here you can find IT-related resources.</p>
+
+<h2>Documents</h2>
+<ul>
+    {% for document in documents %}
+    <li>
+        {{ document.title }} - <a href="{{ document.file.url }}">Download</a>
+      <a href="{% url 'document_replace' document.id %}">Zastąp</a>
+      <p>Ostatnio edytowany przez: {{ document.last_edited_by.username }} dnia {{ document.updated_at }}</p>
+      <p>Ostatnio zastąpiony przez: {{ document.last_replaced_by.username }} dnia {{ document.updated_at }}</p>
+      
+    </li>
+    {% empty %}
+    <li>No documents available.</li>
+    {% endfor %}
+</ul>
