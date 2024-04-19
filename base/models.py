@@ -54,3 +54,4 @@ class SalesDocument(Document):
     last_edited_by = models.ForeignKey(Profile, on_delete=models.SET_NULL, null=True, blank=True, related_name='salesdocument_last_edited')
     last_replaced_by = models.ForeignKey(Profile, on_delete=models.SET_NULL, null=True, blank=True, related_name='salesdocument_last_replaced')
     last_replaced_at = models.DateTimeField(null=True, blank=True)
+
