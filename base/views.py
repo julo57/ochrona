@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect ,get_object_or_404
 from django.http import HttpResponse
 from .forms import ProfileForm, LoginForm,DocumentForm,UserRoleForm
-from .models import Profile, HRDocument, ITDocument, SalesDocument
+from .models import Profile, HRDocument, ITDocument, SalesDocument, FinanceDocument, LogisticsDocument
 from django.forms.models import modelform_factory
 from django.contrib.auth.hashers import check_password
 from docx import Document as DocxDocument
@@ -10,6 +10,7 @@ import os
 from django.conf import settings
 from django.contrib import messages
 from .models import Document
+
 
 
 
@@ -62,6 +63,11 @@ def document_upload(request):
         DocumentModel = SalesDocument
     elif user_profile.department == 'IT':
         DocumentModel = ITDocument
+    elif user_profile.department == 'FINANCE':
+        DocumentModel = FinanceDocument
+    elif user_profile.department == 'LOGISTICS':
+        DocumentModel = LogisticsDocument
+
     else:
         return HttpResponse("Nieznany departament", status=400)
 
@@ -103,6 +109,12 @@ def get_document_model(user_profile):
     elif user_profile.department == 'IT':
         print("Zwracam model ITDocument")
         return ITDocument
+    elif user_profile.department == 'FINANCE':
+        print("Zwracam model FinanceDocument")
+        return FinanceDocument
+    elif user_profile.department == 'LOGISTICS':
+        print("Zwracam model LogisticsDocument")
+        return LogisticsDocument
     else:
         # Zabezpieczenie: zwróć domyślny model, jeśli żaden warunek nie został spełniony
         print("Zwracam model ITDocument")
@@ -141,6 +153,8 @@ def document_edit(request, document_type, document_id):
         'hr': HRDocument,
         'sales': SalesDocument,
         'it': ITDocument,
+        'finance': FinanceDocument,
+        'logistics': LogisticsDocument,
     }
     DocumentModel = model_mapping.get(document_type.lower())
     if not DocumentModel:
@@ -234,7 +248,7 @@ def folder_list(request):
     try:
         user_profile = Profile.objects.get(id=user_id)
         user_department = user_profile.department
-        folders = ['HR', 'SALES', 'IT']
+        folders = ['HR', 'SALES', 'IT','FINANCE','LOGISTICS']
         return render(request, 'base/folders.html', {'folders': folders, 'user_department': user_department})
     except Profile.DoesNotExist:
         return HttpResponse('Nie znaleziono profilu.', status=404)
@@ -251,10 +265,14 @@ def folder_detail(request, department):
     # Pobierz odpowiedni model na podstawie przekazanego departamentu
     if department == 'HR':
         DocumentModel = HRDocument
-    elif department == 'Sales':
+    elif department == 'SALES':
         DocumentModel = SalesDocument
     elif department == 'IT':
         DocumentModel = ITDocument
+    elif department == 'FINANCE':
+        DocumentModel = FinanceDocument
+    elif department == 'LOGISTICS':
+        DocumentModel = LogisticsDocument
     else:
         return HttpResponse("Nieznany departament", status=400)
 
@@ -277,7 +295,7 @@ def folders_view(request):
     user = Profile.objects.get(id=user_id)
     
     if user.role in ['superadmin', 'admin']:
-        folders = ['IT', 'Sales', 'HR']  # Admini mają dostęp do wszystkich folderów
+        folders = ['IT', 'SALES', 'HR','FINANCE','LOGISTICS']  # Admini mają dostęp do wszystkich folderów
     else:
         folders = [user.department]  # Pracownicy mają dostęp tylko do swojego działu
     
@@ -296,13 +314,17 @@ def folder_content_view(request, folder_name):
         return render(request, 'no_access.html')
     if folder_name == 'IT' and user_profile.role not in ['superadmin', 'admin', 'IT']:
         return render(request, 'no_access.html')
+    if folder_name == 'FINANCE' and user_profile.role not in ['superadmin', 'admin', 'FINANCE']:
+        return render(request, 'no_access.html')
+    if folder_name == 'LOGISTICS' and user_profile.role not in ['superadmin', 'admin', 'LOGISTICS']:
+        return render(request, 'no_access.html')
 
     # Logika wyświetlania zawartości folderu
     return render(request, 'folder_content.html', {'folder_name': folder_name})
 
 def get_document_instance_and_model(document_id, user_id):
     # Funkcja próbuje znaleźć instancję dokumentu w różnych modelach
-    for Model in [HRDocument, ITDocument, SalesDocument]:
+    for Model in [HRDocument, ITDocument, SalesDocument, FinanceDocument, LogisticsDocument]:
         try:
             return Model.objects.get(id=document_id, author_id=user_id), Model
         except Model.DoesNotExist:
@@ -322,6 +344,10 @@ def document_replace(request, document_id):
         DocumentModel = SalesDocument
     elif user_profile.department == 'IT':
         DocumentModel = ITDocument
+    elif user_profile.department == 'FINANCE':
+        DocumentModel = FinanceDocument
+    elif user_profile.department == 'LOGISTICS':
+        DocumentModel = LogisticsDocument
     else:
         return HttpResponse("Nieznany departament", status=400)
     

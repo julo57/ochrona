@@ -13,6 +13,8 @@ class Profile(models.Model):
         ('HR', 'HR'),
         ('IT', 'IT'),
         ('SALES', 'SALES'),
+        ('FINANCE', 'FINANCE'),
+        ('LOGISTICS', 'LOGISTICS'),
     )
 
     username = models.CharField(max_length=100, unique=True)
@@ -55,3 +57,12 @@ class SalesDocument(Document):
     last_replaced_by = models.ForeignKey(Profile, on_delete=models.SET_NULL, null=True, blank=True, related_name='salesdocument_last_replaced')
     last_replaced_at = models.DateTimeField(null=True, blank=True)
 
+class FinanceDocument(Document):
+    last_edited_by = models.ForeignKey(Profile, on_delete=models.SET_NULL, null=True, blank=True, related_name='financedocument_last_edited')
+    last_replaced_by = models.ForeignKey(Profile, on_delete=models.SET_NULL, null=True, blank=True, related_name='financedocument_last_replaced')
+    last_replaced_at = models.DateTimeField(null=True, blank=True)
+
+class LogisticsDocument(Document):
+    last_edited_by = models.ForeignKey(Profile, on_delete=models.SET_NULL, null=True, blank=True, related_name='logisticsdocument_last_edited')
+    last_replaced_by = models.ForeignKey(Profile, on_delete=models.SET_NULL, null=True, blank=True, related_name='logisticsdocument_last_replaced')
+    last_replaced_at = models.DateTimeField(null=True, blank=True)

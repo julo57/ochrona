@@ -52,6 +52,8 @@ class DocumentForm(forms.ModelForm):
         ('IT', 'IT'),
         ('Sales', 'Sales'),
         ('HR', 'HR'),
+        ('FINANCE', 'FINANCE'),
+        ('LOGISTICS', 'LOGISTICS'),
     )
     folder = forms.ChoiceField(choices=FOLDER_CHOICES, required=False)
 

@@ -1,2 +1,17 @@
 <h1>Sales Department</h1>
-<p>Welcome to the IT department portal. Here you can find IT-related resources.</p>
+<p>Welcome to the Sales department portal. Here you can find SALES-related resources.</p>
+
+<h2>Documents</h2>
+<ul>
+    {% for document in documents %}
+    <li>
+        {{ document.title }} (uploaded on {{ document.created_at|date:"Y-m-d H:i" }})
+        {{ document.title }} - <a href="{{ document.file.url }}">Download</a>
+      <a href="{% url 'document_replace' document.id %}">Zastąp</a>
+      
+      <p>Ostatnio zastąpiony przez: {{ document.last_replaced_by.username }} dnia {{ document.last_replaced_at|date:"Y-m-d H:i" }}</p>
+    </li>
+    {% empty %}
+    <li>No documents available.</li>
+    {% endfor %}
+</ul>

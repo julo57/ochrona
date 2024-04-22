@@ -3,13 +3,17 @@
 
 <h2>Documents</h2>
 <ul>
-    {% for document in documents %}
-    <li>
-        {{ document.title }} - <a href="{{ document.file.url }}">Download</a>
-      <a href="{% url 'document_replace' document.id %}">Zastąp</a>
-
-    </li>
-    {% empty %}
-    <li>No documents available.</li>
-    {% endfor %}
+  {% for document in documents %}
+  <li>
+      {{ document.title }} (uploaded on {{ document.created_at|date:"Y-m-d H:i" }})
+      {{ document.title }} - <a href="{{ document.file.url }}">Download</a>
+    <a href="{% url 'document_replace' document.id %}">Zastąp</a>
+    
+    {% if document.last_replaced_by %}
+    <p>Ostatnio zastąpiony przez: {{ document.last_replaced_by.username }} dnia {{ document.last_replaced_at|date:"Y-m-d H:i" }}</p>
+    {% endif %}
+  </li>
+  {% empty %}
+  <li>No documents available.</li>
+  {% endfor %}
 </ul>
