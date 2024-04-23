@@ -1,60 +1,67 @@
 {% load static %}
 
-<link rel="stylesheet" href="{% static 'css/style.css' %}">
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twoja Aplikacja</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
 <body>
     <div class="container">
-        
-{% if request.session.user_id %}
-    
-    <p>Imię: {{ request.session.username }}</p>
-    <p>Jesteś zalogowany.
-    <a href="{% url 'logout' %}">Wyloguj się</a></p>
 
-    <p>Dokumenty: <a href="{% url 'documents' %}">przeglądaj</a></p>
-    <p>Upload dokumentów: <a href="{% url 'document_upload' %}">upload</a></p>
-    <!-- Poprawiony przycisk/link do przeglądania folderów -->
-    <p>Przeglądaj foldery: <a href="{% url 'folders' %}" class="btn btn-info">Foldery</a></p>
+        {% if request.session.user_id %}
+            <div class="section user-info">
+                <p>Imię: {{ request.session.username }}</p>
+                <p>Jesteś zalogowany. <a href="{% url 'logout' %}" class="btn btn-primary">Wyloguj się</a></p>
+            </div>
 
-    <p>Dodaj swój klucz publiczny <a href="{% url 'upload_key' %}">Dodaj klucz</a></p>
-    <p>Wyślij plik do podpisania konktentej osobie  <a href="{% url 'send_document' %}">Wyślij</a></p>
+            <div class="section">
+                <p><a href="{% url 'documents' %}" class="btn btn-info">Przeglądaj dokumenty</a></p>
+                <p><a href="{% url 'document_upload' %}" class="btn btn-info">Upload dokumentów</a></p>
+                <p><a href="{% url 'folders' %}" class="btn btn-info">Przeglądaj foldery</a></p>
+                <p><a href="{% url 'upload_key' %}" class="btn btn-info">Dodaj swój klucz publiczny</a></p>
+                <p><a href="{% url 'send_document' %}" class="btn btn-info">Wyślij plik</a></p>
+                <p><a href="{% url 'received-documents' %}" class="btn btn-info">Odbierz plik</a></p>
+            </div>
 
-    <p>odbierz plik  <a href="{% url 'received-documents' %}">odbierz</a></p>
+            {% if request.session.role == 'superadmin' %}
+                <div class="section admin-tools">
+                    <a href="{% url 'admin_panel' %}" class="btn btn-primary">Panel Administracyjny</a>
+                    <p>Witaj, Superadministratorze! Tutaj jest Panel sterowania.</p>
+                </div>
+            {% elif request.session.role == 'admin' %}
+                <p>Witaj, Administratorze! Tutaj są Twoje narzędzia administracyjne.</p>
+            {% elif request.session.role == 'manager' %}
+                <p>Witaj, Managerze! Oto Twoje raporty i narzędzia zarządzania.</p>
+            {% elif request.session.role == 'employee' %}
+                <p>Witaj, Pracowniku! Oto Twoje zasoby.</p>
+            {% elif request.session.role == 'user' %}
+                <p>Witaj, Użytkowniku! Oto Twoje zasoby.</p>
+            {% endif %}
 
-
-{% else %}
-    <form class="login-form" method="post" action="{% url 'home' %}">
-        {% csrf_token %}
-        <h2>Zaloguj się</h2>
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-primary btn-ghost">Zaloguj się</button>
-        <p>Nie masz konta? <a href="{% url 'register' %}">Zarejestruj się</a></p>
-    </form>
-{% endif %}
-
-{% if request.session.role == 'superadmin' %}
-    <a href="{% url 'admin_panel' %}" class="btn btn-primary">Panel Administracyjny</a>
-    <p>Witaj, Superadministratorze! Tutaj jest Panel sterowania.</p>
-{% elif request.session.role == 'admin' %}
-    <p>Witaj, Administratorze! Tutaj są Twoje narzędzia administracyjne.</p>
-{% elif request.session.role == 'manager' %}
-    <p>Witaj, Managerze! Oto Twoje raporty i narzędzia zarządzania.</p>
-{% elif request.session.role == 'employee' %}
-    <p>Witaj, Pracowniku! Oto Twoje zasoby.</p>
-{% elif request.session.role == 'user' %}
-    <p>Witaj, Użytkowniku! Oto Twoje zasoby.</p>
-{% else %}
-    <p>Witaj, Gościu! Oto Twoje dostępne zasoby.</p>
-{% endif %}
-
-<!-- Przesunięcie pętli for poza blok sprawdzający sesję, aby uniknąć powtórzeń -->
-{% for folder in folders %}
-    <div>
-        <h2>{{ folder }}</h2>
-        {% if folder == user_department %}
-            <p>Masz dostęp do tego folderu. <a href="{% url 'folder_detail' folder %}">Przeglądaj</a></p>
         {% else %}
-            <p>Dostęp zabroniony.</p>
+            <form class="login-form" method="post""> <!-- Zmieniono action na 'login' -->
+                {% csrf_token %}
+                <h2>Zaloguj się</h2>
+                {{ form.as_p }}
+                <button type="submit" class="btn btn-primary btn-ghost">Zaloguj się</button>
+                <p>Nie masz konta? <a href="{% url 'register' %}">Zarejestruj się</a></p>
+            </form>
         {% endif %}
+
+        {% for folder in folders %}
+            <div class="section folder">
+                <h2>{{ folder }}</h2>
+                {% if folder == user_department %}
+                    <p>Masz dostęp do tego folderu. <a href="{% url 'folder_detail' folder %}" class="btn btn-info">Przeglądaj</a></p>
+                {% else %}
+                    <p>Dostęp zabroniony.</p>
+                {% endif %}
+            </div>
+        {% endfor %}
+        
     </div>
-{% endfor %}
+</body>
+</html>

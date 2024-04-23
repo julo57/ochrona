@@ -1,12 +1,27 @@
-<h2>Received Documents</h2>
-<ul>
-    {% for document in documents %}
-    <li>
-        <strong>{{ document.title }}</strong> 
-        - <a href="{{ document.file.url }}">Download Document</a>
-        {% if document.public_key %}
-        - <a href="data:text/plain;charset=utf-8,{{ document.public_key|urlencode }}" download="{{ document.title }}_key.txt">Download Public Key</a>
-        {% endif %}
-    </li>
-    {% endfor %}
-</ul>
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Received Documents</title>
+    <link rel="stylesheet" href="{% static 'css/recive.css' %}">
+</head>
+<body>
+    <div class="container">
+        <h2>Received Documents</h2>
+        <ul class="documents-list">
+            {% for document in documents %}
+            <li>
+                <strong>{{ document.title }}</strong> 
+                - <a href="{{ document.file.url }}">Download Document</a>
+                {% if document.public_key %}
+                - <a href="data:text/plain;charset=utf-8,{{ document.public_key|urlencode }}" download="{{ document.title }}_key.txt">Download Public Key</a>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>
