@@ -1,15 +1,22 @@
+{% load static %}
+
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+<body>
+    <div class="container">
+        
 {% if request.session.user_id %}
     
     <p>Imię: {{ request.session.username }}</p>
-    <p>Jesteś zalogowany.</p>
-    <a href="{% url 'logout' %}">Wyloguj się</a>
+    <p>Jesteś zalogowany.
+    <a href="{% url 'logout' %}">Wyloguj się</a></p>
 
     <p>Dokumenty: <a href="{% url 'documents' %}">przeglądaj</a></p>
     <p>Upload dokumentów: <a href="{% url 'document_upload' %}">upload</a></p>
     <!-- Poprawiony przycisk/link do przeglądania folderów -->
     <p>Przeglądaj foldery: <a href="{% url 'folders' %}" class="btn btn-info">Foldery</a></p>
 
-    <p>Dodaj swój klucz publiczny</p> <a href="{% url 'upload_key' %}">Dodaj klucz</a>
+    <p>Dodaj swój klucz publiczny <a href="{% url 'upload_key' %}">Dodaj klucz</a></p>
     <p>Wyślij plik do podpisania konktentej osobie  <a href="{% url 'send_document' %}">Wyślij</a></p>
 
     <p>odbierz plik  <a href="{% url 'received-documents' %}">odbierz</a></p>

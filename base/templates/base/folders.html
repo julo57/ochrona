@@ -1,10 +1,16 @@
-{% for folder in folders %}
-    <div>
-        <h2>{{ folder }}</h2>
-        {% if folder == user_department %}
-            <p>Masz dostęp do tego folderu. <a href="{% url 'folder_detail' folder %}">Przeglądaj</a></p>
-        {% else %}
-            <p>Dostęp zabroniony.</p>
-        {% endif %}
-    </div>
-{% endfor %}
+
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/folder.css' %}">
+
+<div class="folder-list">
+    {% for folder in folders %}
+        <div class="folder">
+            <h2>{{ folder }}</h2>
+            {% if folder == user_department %}
+                <p>Masz dostęp do tego folderu. <a href="{% url 'folder_detail' folder %}">Przeglądaj</a></p>
+            {% else %}
+                <p class="access-denied">Dostęp zabroniony.</p>
+            {% endif %}
+        </div>
+    {% endfor %}
+</div>

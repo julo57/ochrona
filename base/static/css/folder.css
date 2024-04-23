@@ -1,0 +1,44 @@
+/* Base styles for the folder list */
+.folder-list {
+    width: 100%;
+    max-width: 600px; /* Adjust this to suit your design */
+    margin: 20px auto;
+    padding: 20px;
+    background: #ffffff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    border-radius: 8px;
+}
+
+.folder {
+    padding: 15px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #eee; /* Light line between folders */
+}
+
+.folder:last-child {
+    border-bottom: none; /* Remove border from the last item */
+}
+
+.folder h2 {
+    color: #0056b3; /* Theme color */
+    margin-bottom: 10px; /* Space below the folder title */
+}
+
+.folder p {
+    margin: 5px 0; /* Vertical spacing for paragraph */
+    font-size: 16px; /* Slightly larger font for readability */
+}
+
+.folder a {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.folder a:hover {
+    text-decoration: underline;
+}
+
+.access-denied {
+    color: #cc0000; /* Red color for access denied messages */
+}

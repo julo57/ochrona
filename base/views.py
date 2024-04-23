@@ -370,48 +370,30 @@ def document_replace(request, document_id):
 
 
 def send_document(request):
-    user_profile = get_object_or_404(Profile, id=request.session.get('user_id'))  # Pobranie profilu zalogowanego użytkownika
+    user_profile = get_object_or_404(Profile, id=request.session.get('user_id'))
 
+    department_to_model = {
+        'HR': HRDocument,
+        'Sales': SalesDocument,
+        'IT': ITDocument,
+        'FINANCE': FinanceDocument,
+        'LOGISTICS': LogisticsDocument,
+    }
     
-    if user_profile.department == 'HR':
-        DocumentModel = HRDocument
-    elif user_profile.department == 'Sales':
-        DocumentModel = SalesDocument
-    elif user_profile.department == 'IT':
-        DocumentModel = ITDocument
-    elif user_profile.department == 'FINANCE':
-        DocumentModel = FinanceDocument
-    elif user_profile.department == 'LOGISTICS':
-        DocumentModel = LogisticsDocument
-
-    else:
+    DocumentModel = department_to_model.get(user_profile.department)
+    if not DocumentModel:
         return HttpResponse("Nieznany departament", status=400)
-
-    print("to jest dokumetjn model" ,DocumentModel)
     
-
-    # Stworzenie dynamicznego formularza dla wybranego modelu dokumentu
     DocumentForm = modelform_factory(DocumentModel, fields=['title', 'file', 'recipient','public_key'])
-    print("to jest formularz",DocumentForm)
     if request.method == 'POST':
         form = DocumentForm(request.POST, request.FILES)
-        print("to jest files",request.FILES)
         if form.is_valid():
-            print("Działa")
             document = form.save(commit=False)
-            document.author = user_profile  # przypisanie autora dokumentu
-            uploaded_file = request.FILES['file']
-            original_file_name = uploaded_file.name
-        
-            document.file = uploaded_file
+            document.author = user_profile
             document.save()
-
-            return redirect('documents')  # przekierowanie do strony sukcesu
-        else:
-            print("Nie działa")
+            return redirect('home')  # przekierowanie do strony sukcesu
     else:
-        form = DocumentForm()  # pusty formularz dla metody GET
-        print("Nie działa2")
+        form = DocumentForm()
 
     return render(request, 'base/send_document.html', {'form': form})
 

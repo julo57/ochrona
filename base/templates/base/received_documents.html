@@ -2,7 +2,11 @@
 <ul>
     {% for document in documents %}
     <li>
-        <strong>{{ document.title }}</strong> - <a href="{{ document.file.url }}">Download</a>
+        <strong>{{ document.title }}</strong> 
+        - <a href="{{ document.file.url }}">Download Document</a>
+        {% if document.public_key %}
+        - <a href="data:text/plain;charset=utf-8,{{ document.public_key|urlencode }}" download="{{ document.title }}_key.txt">Download Public Key</a>
+        {% endif %}
     </li>
     {% endfor %}
 </ul>

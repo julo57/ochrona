@@ -92,10 +92,17 @@ class SendDocumentForm(forms.ModelForm):
         required=True,
         widget=forms.Select(attrs={'class': 'form-control'})
     )
+    public_key = forms.ModelChoiceField(
+        queryset=PublicKey.objects.all(),
+        label="Public Key",
+        required=False,  # Zależy od wymagań, czy klucz ma być wymagany
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text="Select the public key to include with the document."
+    )
 
     class Meta:
         model = Document  # Ustaw ogólny model Document jeżeli jest nieabstrakcyjny, w przeciwnym razie ustal poniżej
-        fields = ('recipient',)  # Możesz dodać tu więcej pól zależnie od potrzeb
+        fields = ('recipient', 'public_key',)  # Dodano public_key do pól
 
     def __init__(self, *args, **kwargs):
         user_profile = kwargs.pop('user_profile', None)
@@ -124,7 +131,6 @@ class SendDocumentForm(forms.ModelForm):
                 label="Select Document",
                 widget=forms.Select(attrs={'class': 'form-control'})
             )
-
 
 class PublicKeyForm(forms.ModelForm):
     class Meta:
