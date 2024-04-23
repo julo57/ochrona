@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect ,get_object_or_404
 from django.http import HttpResponse
-from .forms import ProfileForm, LoginForm,DocumentForm,UserRoleForm
+from .forms import ProfileForm, LoginForm,DocumentForm,UserRoleForm,SendDocumentForm
 from .models import Profile, HRDocument, ITDocument, SalesDocument, FinanceDocument, LogisticsDocument
 from django.forms.models import modelform_factory
 from django.contrib.auth.hashers import check_password
@@ -70,6 +70,8 @@ def document_upload(request):
 
     else:
         return HttpResponse("Nieznany departament", status=400)
+    
+   
 
     DocumentForm = modelform_factory(DocumentModel, fields=['title', 'file'])
 
@@ -141,6 +143,7 @@ def document_list(request):
     hr_documents = HRDocument.objects.filter(author_id=user_id)
     sales_documents = SalesDocument.objects.filter(author_id=user_id)
     it_documents = ITDocument.objects.filter(author_id=user_id)
+
     
     # Możesz połączyć te zapytania w jedną listę, jeśli chcesz je wyświetlić razem
     documents = list(hr_documents) + list(sales_documents) + list(it_documents)
@@ -376,3 +379,74 @@ def document_replace(request, document_id):
         form = DocumentForm(instance=document)
 
     return render(request, 'base/document_upload.html', {'form': form, 'document': document})
+
+
+
+def send_document(request):
+    user_profile = get_object_or_404(Profile, id=request.session.get('user_id'))  # Pobranie profilu zalogowanego użytkownika
+
+    
+    if user_profile.department == 'HR':
+        DocumentModel = HRDocument
+    elif user_profile.department == 'Sales':
+        DocumentModel = SalesDocument
+    elif user_profile.department == 'IT':
+        DocumentModel = ITDocument
+    elif user_profile.department == 'FINANCE':
+        DocumentModel = FinanceDocument
+    elif user_profile.department == 'LOGISTICS':
+        DocumentModel = LogisticsDocument
+
+    else:
+        return HttpResponse("Nieznany departament", status=400)
+
+    print("to jest dokumetjn model" ,DocumentModel)
+    
+
+    # Stworzenie dynamicznego formularza dla wybranego modelu dokumentu
+    DocumentForm = modelform_factory(DocumentModel, fields=['title', 'file', 'recipient'])
+    print("to jest formularz",DocumentForm)
+    if request.method == 'POST':
+        form = DocumentForm(request.POST, request.FILES)
+        print("to jest files",request.FILES)
+        if form.is_valid():
+            print("Działa")
+            document = form.save(commit=False)
+            document.author = user_profile  # przypisanie autora dokumentu
+            uploaded_file = request.FILES['file']
+            original_file_name = uploaded_file.name
+        
+            document.file = uploaded_file
+            document.save()
+
+            return redirect('documents')  # przekierowanie do strony sukcesu
+        else:
+            print("Nie działa")
+    else:
+        form = DocumentForm()  # pusty formularz dla metody GET
+        print("Nie działa2")
+
+    return render(request, 'base/send_document.html', {'form': form})
+
+
+def list_received_documents(request):
+    user_profile = get_object_or_404(Profile, id=request.session.get('user_id'))  # Pobranie profilu zalogowanego użytkownika
+
+    # Mapowanie departamentu na odpowiedni model dokumentu
+    department_to_document_model = {
+        'HR': HRDocument,
+        'Sales': SalesDocument,
+        'IT': ITDocument,
+        'FINANCE': FinanceDocument,
+        'LOGISTICS': LogisticsDocument,
+    }
+
+    DocumentModel = department_to_document_model.get(user_profile.department)
+
+    if not DocumentModel:
+        return HttpResponse("Nieznany departament", status=400)
+
+    # Pobieranie dokumentów przypisanych do profilu użytkownika
+    documents = DocumentModel.objects.filter(recipient=user_profile)
+
+    return render(request, 'base/received_documents.html', {'documents': documents})

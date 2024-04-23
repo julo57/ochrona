@@ -32,9 +32,6 @@ class Document(models.Model):
     author = models.ForeignKey(Profile, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     
-    
-
-
     class Meta:
         abstract = True
 
@@ -46,23 +43,30 @@ class HRDocument(Document):
     last_edited_by = models.ForeignKey(Profile, on_delete=models.SET_NULL, null=True, blank=True, related_name='hrdocument_last_edited')
     last_replaced_by = models.ForeignKey(Profile, on_delete=models.SET_NULL, null=True, blank=True, related_name='hrdocument_last_replaced')
     last_replaced_at = models.DateTimeField(null=True, blank=True)
+    recipient = models.ForeignKey(Profile, related_name='received_documents_HR', on_delete=models.SET_NULL, null=True, blank=True)
+
 
 class ITDocument(Document):
     last_edited_by = models.ForeignKey(Profile, on_delete=models.SET_NULL, null=True, blank=True, related_name='itdocument_last_edited')
     last_replaced_by = models.ForeignKey(Profile, on_delete=models.SET_NULL, null=True, blank=True, related_name='itdocument_last_replaced')
     last_replaced_at = models.DateTimeField(null=True, blank=True)
+    recipient = models.ForeignKey(Profile, related_name='received_documents_IT', on_delete=models.SET_NULL, null=True, blank=True)
 
 class SalesDocument(Document):
     last_edited_by = models.ForeignKey(Profile, on_delete=models.SET_NULL, null=True, blank=True, related_name='salesdocument_last_edited')
     last_replaced_by = models.ForeignKey(Profile, on_delete=models.SET_NULL, null=True, blank=True, related_name='salesdocument_last_replaced')
     last_replaced_at = models.DateTimeField(null=True, blank=True)
+    recipient = models.ForeignKey(Profile, related_name='received_documents_SALES', on_delete=models.SET_NULL, null=True, blank=True)
 
 class FinanceDocument(Document):
     last_edited_by = models.ForeignKey(Profile, on_delete=models.SET_NULL, null=True, blank=True, related_name='financedocument_last_edited')
     last_replaced_by = models.ForeignKey(Profile, on_delete=models.SET_NULL, null=True, blank=True, related_name='financedocument_last_replaced')
     last_replaced_at = models.DateTimeField(null=True, blank=True)
+    recipient = models.ForeignKey(Profile, related_name='received_documents_FINANCE', on_delete=models.SET_NULL, null=True, blank=True)
+
 
 class LogisticsDocument(Document):
     last_edited_by = models.ForeignKey(Profile, on_delete=models.SET_NULL, null=True, blank=True, related_name='logisticsdocument_last_edited')
     last_replaced_by = models.ForeignKey(Profile, on_delete=models.SET_NULL, null=True, blank=True, related_name='logisticsdocument_last_replaced')
     last_replaced_at = models.DateTimeField(null=True, blank=True)
+    recipient = models.ForeignKey(Profile, related_name='received_documents_LOGISTIC', on_delete=models.SET_NULL, null=True, blank=True)

@@ -1,5 +1,5 @@
 from django.forms import ModelForm
-from .models import Profile , HRDocument, SalesDocument, ITDocument 
+from .models import Profile , HRDocument, SalesDocument, ITDocument ,Document, FinanceDocument, LogisticsDocument
 from django import forms
 from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import make_password
@@ -60,10 +60,22 @@ class DocumentForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         user_profile = kwargs.pop('user_profile', None)
         super(DocumentForm, self).__init__(*args, **kwargs)
-        
-        # Usuń pole 'folder', jeśli model nie ma tego pola
-        if not hasattr(HRDocument, 'folder'):
-            del self.fields['folder']
+
+        if user_profile:
+            department_document_class = {
+                'IT': ITDocument,
+                'Sales': SalesDocument,
+                'HR': HRDocument,
+                'FINANCE': FinanceDocument,
+                'LOGISTICS': LogisticsDocument
+            }
+            document_class = department_document_class.get(user_profile.department, Document)
+            self.instance.__class__ = document_class
+            self._meta.model = document_class  # zmieniamy model formularza dynamicznie
+            
+            # Usuń pole 'folder', jeśli model nie ma tego pola
+            if not hasattr(document_class, 'folder'):
+                self.fields.pop('folder', None)
 
 
 class UserRoleForm(forms.ModelForm):
@@ -71,3 +83,43 @@ class UserRoleForm(forms.ModelForm):
     class Meta:
         model = Profile
         fields = ['role', 'department']
+
+class SendDocumentForm(forms.ModelForm):
+    recipient = forms.ModelChoiceField(
+        queryset=Profile.objects.all(),
+        label="Recipient",
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+    class Meta:
+        model = Document  # Ustaw ogólny model Document jeżeli jest nieabstrakcyjny, w przeciwnym razie ustal poniżej
+        fields = ('recipient',)  # Możesz dodać tu więcej pól zależnie od potrzeb
+
+    def __init__(self, *args, **kwargs):
+        user_profile = kwargs.pop('user_profile', None)
+        super(SendDocumentForm, self).__init__(*args, **kwargs)
+
+        # Zależnie od departamentu ustaw odpowiedni model dokumentów
+        department_documents = {
+            'HR': HRDocument.objects.all(),
+            'IT': ITDocument.objects.all(),
+            'SALES': SalesDocument.objects.all(),
+            'FINANCE': FinanceDocument.objects.all(),
+            'LOGISTICS': LogisticsDocument.objects.all(),
+        }
+
+        # Ustaw queryset dla dokumentów zgodnie z departamentem profilu użytkownika
+        if user_profile and user_profile.department in department_documents:
+            self.fields['document'] = forms.ModelChoiceField(
+                queryset=department_documents[user_profile.department],
+                label="Select Document",
+                widget=forms.Select(attrs={'class': 'form-control'})
+            )
+        else:
+            # Jeżeli profil nie ma przypisanego departamentu, nie pokazuj dokumentów
+            self.fields['document'] = forms.ModelChoiceField(
+                queryset=Document.objects.none(),  # Zakładając, że Document nie jest abstrakcyjny
+                label="Select Document",
+                widget=forms.Select(attrs={'class': 'form-control'})
+            )

@@ -9,6 +9,12 @@
     <!-- Poprawiony przycisk/link do przeglądania folderów -->
     <p>Przeglądaj foldery: <a href="{% url 'folders' %}" class="btn btn-info">Foldery</a></p>
 
+    <p>Dodaj swój klucz publiczny</p>
+    <p>Wyślij plik do podpisania konktentej osobie  <a href="{% url 'send_document' %}">Wyślij</a></p>
+
+    <p>odbierz plik  <a href="{% url 'received-documents' %}">odbierz</a></p>
+
+
 {% else %}
     <form class="login-form" method="post" action="{% url 'home' %}">
         {% csrf_token %}
