@@ -1,0 +1,6 @@
+<h2>Upload Your Public Key</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Upload</button>
+</form>

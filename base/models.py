@@ -19,7 +19,7 @@ class Profile(models.Model):
 
     username = models.CharField(max_length=100, unique=True)
     email = models.EmailField(max_length=100, unique=True)
-    password = models.CharField(max_length=128)  # W prawdziwych projektach użyj Django auth system
+    password = models.CharField(max_length=128)  
     role = models.CharField(max_length=20, choices=USER_ROLES, default='guest')
     department = models.CharField(max_length=100, choices=USER_DEPARTMENT, default='HR')
 
@@ -28,10 +28,11 @@ class Profile(models.Model):
 
 class Document(models.Model):
     title = models.CharField(max_length=255)
-    file = models.FileField(upload_to='documents/')  # Będziemy modyfikować tę ścieżkę w widoku
+    file = models.FileField(upload_to='documents/')  
     author = models.ForeignKey(Profile, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+    is_public = models.BooleanField(default=False)
+    public_key = models.ForeignKey('PublicKey', on_delete=models.SET_NULL, null=True, blank=True)
     class Meta:
         abstract = True
 
@@ -70,3 +71,15 @@ class LogisticsDocument(Document):
     last_replaced_by = models.ForeignKey(Profile, on_delete=models.SET_NULL, null=True, blank=True, related_name='logisticsdocument_last_replaced')
     last_replaced_at = models.DateTimeField(null=True, blank=True)
     recipient = models.ForeignKey(Profile, related_name='received_documents_LOGISTIC', on_delete=models.SET_NULL, null=True, blank=True)
+
+
+
+class PublicKey(models.Model):
+    
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='public_keys',default="Janek")
+    key = models.TextField()  # Zaszyfrowany klucz publiczny
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return self.profile.username

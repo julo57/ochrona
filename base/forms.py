@@ -1,9 +1,10 @@
 from django.forms import ModelForm
-from .models import Profile , HRDocument, SalesDocument, ITDocument ,Document, FinanceDocument, LogisticsDocument
+from .models import Profile , HRDocument, SalesDocument, ITDocument ,Document, FinanceDocument, LogisticsDocument, PublicKey
 from django import forms
 from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import make_password
 import re
+
 
 class LoginForm(forms.Form):
     username = forms.CharField(label='Username', max_length=100)
@@ -123,3 +124,26 @@ class SendDocumentForm(forms.ModelForm):
                 label="Select Document",
                 widget=forms.Select(attrs={'class': 'form-control'})
             )
+
+
+class PublicKeyForm(forms.ModelForm):
+    class Meta:
+        model = PublicKey
+        fields = ['key']
+
+    def __init__(self, *args, profile=None, **kwargs):
+        super(PublicKeyForm, self).__init__(*args, **kwargs)
+        self.profile = profile
+
+    def save(self, commit=True):
+        instance = super(PublicKeyForm, self).save(commit=False)
+        instance.profile = self.profile
+        
+        # Hashowanie klucza publicznego
+        key_data = self.cleaned_data['key']
+        hashed_key = make_password(key_data)
+        instance.key = hashed_key  # Zapisanie zahashowanego klucza
+
+        if commit:
+            instance.save()
+        return instance

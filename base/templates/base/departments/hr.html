@@ -1,17 +1,16 @@
 <h1>HR Department</h1>
 <p>Welcome to the HR department portal. Here you can find HR-related resources.</p>
 
-<h2>Documents</h2>
+<h1>Dokumenty w departamencie {{ folder_name }}</h1>
 <ul>
   {% for document in documents %}
-  <li>
-      {{ document.title }} (uploaded on {{ document.created_at|date:"Y-m-d H:i" }})
-      {{ document.title }} - <a href="{{ document.file.url }}">Download</a>
-    <a href="{% url 'document_replace' document.id %}">Zastąp</a>
-    
-    <p>Ostatnio zastąpiony przez: {{ document.last_replaced_by.username }} dnia {{ document.last_replaced_at|date:"Y-m-d H:i" }}</p>
-  </li>
-  {% empty %}
-  <li>No documents available.</li>
+    <li>
+      {{ document.title }} - <a href="{{ document.file.url }}">Pobierz</a>
+      {% if document.is_public %}
+        (Publiczny)
+      {% else %}
+        (Prywatny)
+      {% endif %}
+    </li>
   {% endfor %}
 </ul>

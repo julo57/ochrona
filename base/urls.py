@@ -15,13 +15,10 @@ urlpatterns = [
     path('folders/', views.folder_list, name='folders'),  # Dodanie ukośnika na końcu
     path('folder/<str:department>/', views.folder_detail, name='folder_detail'),
   
-    path('folders/IT/', views.folder_content_view, {'folder_name': 'IT'}, name='folder_it'),
-    path('folders/Sales/', views.folder_content_view, {'folder_name': 'Sales'}, name='folder_sales'),
-    path('folders/HR/', views.folder_content_view, {'folder_name': 'HR'}, name='folder_hr'),
-    path('folders/FINANCE/', views.folder_content_view, {'folder_name': 'FINANCE'}, name='folder_finance'),
-    path('folders/LOGISTICS/', views.folder_content_view, {'folder_name': 'LOGISTICS'}, name='folder_logistics'),
+   
     path('documents/replace/<int:document_id>/', views.document_replace, name='document_replace'),
     path('send-document/', views.send_document, name='send_document'),
     path('received-documents/', views.list_received_documents, name='received-documents'),
-   
+    
+    path('upload_key/', views.upload_public_key, name='upload_key'),
 ]

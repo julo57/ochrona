@@ -9,8 +9,8 @@ import subprocess
 import os
 from django.conf import settings
 from django.contrib import messages
-from .models import Document
 
+from .forms import PublicKeyForm
 
 
 
@@ -73,7 +73,7 @@ def document_upload(request):
     
    
 
-    DocumentForm = modelform_factory(DocumentModel, fields=['title', 'file'])
+    DocumentForm = modelform_factory(DocumentModel, fields=['title', 'file','is_public'])
 
     if request.method == 'POST':
         form = DocumentForm(request.POST, request.FILES)
@@ -262,30 +262,36 @@ from .models import Profile, ITDocument, HRDocument, SalesDocument
 def folder_detail(request, department):
     if not request.user.is_authenticated:
         return redirect('login')
-
+    
+    # Pobranie profilu zalogowanego użytkownika
     user_profile = get_object_or_404(Profile, id=request.session.get('user_id'))
+    
+    # Mapowanie nazwy departamentu na odpowiadający mu model dokumentu
+    department_to_model = {
+        'HR': HRDocument,
+        'SALES': SalesDocument,
+        'IT': ITDocument,
+        'FINANCE': FinanceDocument,
+        'LOGISTICS': LogisticsDocument
+    }
 
-    # Pobierz odpowiedni model na podstawie przekazanego departamentu
-    if department == 'HR':
-        DocumentModel = HRDocument
-    elif department == 'SALES':
-        DocumentModel = SalesDocument
-    elif department == 'IT':
-        DocumentModel = ITDocument
-    elif department == 'FINANCE':
-        DocumentModel = FinanceDocument
-    elif department == 'LOGISTICS':
-        DocumentModel = LogisticsDocument
-    else:
+    DocumentModel = department_to_model.get(department)
+    if not DocumentModel:
         return HttpResponse("Nieznany departament", status=400)
 
-    # Sprawdzenie uprawnień użytkownika do dostępu do dokumentów danego departamentu
+    # Sprawdzenie, czy użytkownik ma uprawnienia do przeglądania dokumentów danego departamentu
     if not (user_profile.role in ['superadmin', 'admin'] or user_profile.department == department):
         return HttpResponse("Brak dostępu", status=403)
+    
+    # Filtracja dokumentów:
+    if user_profile.role in ['superadmin', 'admin']:
+        # Admini i superadmini widzą wszystkie dokumenty w danym departamencie
+        documents = DocumentModel.objects.all()
+    else:
+        # Pozostali użytkownicy widzą tylko swoje dokumenty i publiczne dokumenty w danym departamencie
+        documents = DocumentModel.objects.filter(author=user_profile) | DocumentModel.objects.filter(is_public=True)
 
-    documents = DocumentModel.objects.all()  # Pobierz wszystkie dokumenty dla danego modelu
-
-    template_name = f'base/departments/{department.lower()}.html'
+    template_name = f'base/departments/{department.lower()}.html'  # Dynamiczne tworzenie nazwy szablonu
 
     return render(request, template_name, {'department': department, 'documents': documents})
 
@@ -304,26 +310,7 @@ def folders_view(request):
     
     return render(request, 'folders.html', {'folders': folders})
 
-def folder_content_view(request, folder_name):
-    user_id = request.session.get('user_id')
-    try:
-        user_profile = Profile.objects.get(id=user_id)
-    except Profile.DoesNotExist:
-        return HttpResponse("Nie znaleziono profilu użytkownika.", status=404)
 
-    if folder_name == 'HR' and user_profile.role not in ['superadmin', 'admin', 'HR']:
-        return render(request, 'no_access.html')
-    if folder_name == 'SALES' and user_profile.role not in ['superadmin', 'admin', 'SALES']:
-        return render(request, 'no_access.html')
-    if folder_name == 'IT' and user_profile.role not in ['superadmin', 'admin', 'IT']:
-        return render(request, 'no_access.html')
-    if folder_name == 'FINANCE' and user_profile.role not in ['superadmin', 'admin', 'FINANCE']:
-        return render(request, 'no_access.html')
-    if folder_name == 'LOGISTICS' and user_profile.role not in ['superadmin', 'admin', 'LOGISTICS']:
-        return render(request, 'no_access.html')
-
-    # Logika wyświetlania zawartości folderu
-    return render(request, 'folder_content.html', {'folder_name': folder_name})
 
 def get_document_instance_and_model(document_id, user_id):
     # Funkcja próbuje znaleźć instancję dokumentu w różnych modelach
@@ -404,7 +391,7 @@ def send_document(request):
     
 
     # Stworzenie dynamicznego formularza dla wybranego modelu dokumentu
-    DocumentForm = modelform_factory(DocumentModel, fields=['title', 'file', 'recipient'])
+    DocumentForm = modelform_factory(DocumentModel, fields=['title', 'file', 'recipient','public_key'])
     print("to jest formularz",DocumentForm)
     if request.method == 'POST':
         form = DocumentForm(request.POST, request.FILES)
@@ -450,3 +437,16 @@ def list_received_documents(request):
     documents = DocumentModel.objects.filter(recipient=user_profile)
 
     return render(request, 'base/received_documents.html', {'documents': documents})
+
+def upload_public_key(request):
+    user_profile = get_object_or_404(Profile, id=request.session.get('user_id'))
+    
+    if request.method == 'POST':
+        form = PublicKeyForm(request.POST, profile=user_profile)
+        if form.is_valid():
+            form.save()
+            return redirect('home')  # Przekierowanie do strony głównej po pomyślnym dodaniu lub aktualizacji klucza
+    else:
+        form = PublicKeyForm(profile=user_profile)  # Przekazanie profilu również przy tworzeniu pustego formularza
+
+    return render(request, 'base/upload_key.html', {'form': form})
