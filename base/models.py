@@ -92,14 +92,15 @@ class SendDocument(models.Model):
     title = models.CharField(max_length=255)
     file = models.FileField(
         upload_to='documents/',
-        validators=[FileExtensionValidator(allowed_extensions=['gpg'])]
-    ) 
+        validators=[FileExtensionValidator(allowed_extensions=['gpg'])
+    ])
     author = models.ForeignKey(Profile, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
-    recipient = models.ForeignKey(Profile, related_name='received_documents', on_delete=models.SET_NULL, null=True, blank=True)
+    recipient = models.ForeignKey(Profile, related_name='received_single_documents', on_delete=models.SET_NULL, null=True, blank=True)
+    recipients = models.ManyToManyField(Profile, related_name='received_documents', blank=True)
     public_key = models.ForeignKey(PublicKey, on_delete=models.SET_NULL, null=True, blank=True)
     is_public = models.BooleanField(default=False)
-    
+
     def __str__(self):
         return self.title
 

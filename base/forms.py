@@ -108,7 +108,13 @@ class SendDocumentForm(forms.ModelForm):
         queryset=Profile.objects.all(),
         label="Recipient",
         widget=forms.Select(attrs={'class': 'form-control'}),
-        required=True
+        required=False  # Możesz ustawić na False, jeśli obecność tego pola nie jest wymagana
+    )
+    recipients = forms.ModelMultipleChoiceField(
+        queryset=Profile.objects.all(),
+        label="Additional Recipients",
+        widget=forms.SelectMultiple(attrs={'class': 'form-control'}),
+        required=False  # Możesz ustawić na False, jeśli obecność tego pola nie jest wymagana
     )
     public_key = forms.ModelChoiceField(
         queryset=PublicKey.objects.none(),  # Zmienione na none, będziemy filtrować w __init__
@@ -128,20 +134,21 @@ class SendDocumentForm(forms.ModelForm):
         required=True
     )
     
-
     class Meta:
-        model = SendDocument  # Ustawienie modelu Document jest teraz zbędne tutaj
-        fields = ('title', 'file', 'recipient', 'public_key')
+        model = SendDocument
+        fields = ('title', 'file', 'recipient', 'recipients', 'public_key')
 
     def __init__(self, *args, **kwargs):
         user_profile = kwargs.pop('user_profile', None)
         super(SendDocumentForm, self).__init__(*args, **kwargs)
-        
+
+        # Filtruj klucze publiczne dostępne dla danego profilu użytkownika
         if user_profile:
-            print("działaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaam")
             self.fields['public_key'].queryset = PublicKey.objects.filter(profile=user_profile)
-            print(PublicKey.objects.filter(key=user_profile))
-            print("public key", self.fields['public_key'].queryset)
+
+        # Opcjonalnie możesz chcieć również filtrować dostępne profile dla obu pól odbiorców
+        self.fields['recipient'].queryset = Profile.objects.filter(department=user_profile.department)
+        self.fields['recipients'].queryset = Profile.objects.filter(department=user_profile.department)
             
 
 class PublicKeyForm(forms.ModelForm):
@@ -157,11 +164,6 @@ class PublicKeyForm(forms.ModelForm):
         instance = super(PublicKeyForm, self).save(commit=False)
         instance.profile = self.profile
         
-        # Hashowanie klucza publicznego
-        key_data = self.cleaned_data['key']
-        hashed_key = make_password(key_data)
-        instance.key = hashed_key  # Zapisanie zahashowanego klucza
-
         if commit:
             instance.save()
         return instance

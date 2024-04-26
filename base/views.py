@@ -9,7 +9,7 @@ import subprocess
 import os
 from django.conf import settings
 from django.contrib import messages
-
+from django.db.models import Q  # Pamiętaj o dodaniu tego importu
 from .forms import PublicKeyForm
 from .models import SendDocument
 
@@ -370,7 +370,7 @@ def send_document(request):
         'FINANCE': FinanceDocument,
         'LOGISTICS': LogisticsDocument,
     }
-    
+
     DocumentModel = department_to_model.get(user_profile.department)
     if not DocumentModel:
         return HttpResponse("Nieznany departament", status=400)
@@ -381,8 +381,13 @@ def send_document(request):
             document = form.save(commit=False)
             document.author = user_profile
             document.public_key = form.cleaned_data['public_key']  # Przypisanie wybranego klucza publicznego
-            print("klucz publiczny",document.public_key)
-            document.save()
+            document.save()  # Zapisujemy dokument przed przypisaniem relacji wiele-do-wielu
+            
+            # Obsługa wielu odbiorców
+            recipients = form.cleaned_data['recipients']
+            document.recipients.set(recipients)  # Ustawienie wielu odbiorców
+            
+            # Możesz tutaj dodać wiadomość o sukcesie lub podobną logikę.
             return redirect('home')
     else:
         form = SendDocumentForm(user_profile=user_profile)
@@ -392,11 +397,12 @@ def send_document(request):
 def list_received_documents(request):
     user_profile = get_object_or_404(Profile, id=request.session.get('user_id'))  # Pobranie profilu zalogowanego użytkownika
 
-    # Pobieranie dokumentów przypisanych do profilu użytkownika
-    documents = SendDocument.objects.filter(recipient=user_profile)
-    
-    return render(request, 'base/received_documents.html', {'documents': documents})
+    # Pobieranie dokumentów przypisanych do profilu użytkownika jako pojedynczego odbiorcę lub jako jednego z wielu odbiorców
+    documents = SendDocument.objects.filter(
+        Q(recipient=user_profile) | Q(recipients=user_profile)
+    ).distinct()
 
+    return render(request, 'base/received_documents.html', {'documents': documents})
 
 def upload_public_key(request):
     user_profile = get_object_or_404(Profile, id=request.session.get('user_id'))
