@@ -3,8 +3,9 @@ from .models import Profile , HRDocument, SalesDocument, ITDocument ,Document, F
 from django import forms
 from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import make_password
+import os
 import re
-
+from .models import SendDocument
 
 class LoginForm(forms.Form):
     username = forms.CharField(label='Username', max_length=100)
@@ -57,27 +58,44 @@ class DocumentForm(forms.ModelForm):
         ('LOGISTICS', 'LOGISTICS'),
     )
     folder = forms.ChoiceField(choices=FOLDER_CHOICES, required=False)
+    recipient = forms.ModelChoiceField(
+        queryset=Profile.objects.all(),
+        label="Recipient",
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        required=True
+    )
+    public_key = forms.ModelChoiceField(
+        queryset=PublicKey.objects.none(),  # Initially empty, will be set dynamically
+        label="Public Key",
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text="Select the public key to include with the document.",
+        required=True
+    )
+
+    class Meta:
+        model = Document  # This should be a concrete model if not abstract
+        fields = ('title', 'file', 'recipient', 'public_key', 'folder')
 
     def __init__(self, *args, **kwargs):
         user_profile = kwargs.pop('user_profile', None)
         super(DocumentForm, self).__init__(*args, **kwargs)
 
-        if user_profile:
-            department_document_class = {
-                'IT': ITDocument,
-                'Sales': SalesDocument,
-                'HR': HRDocument,
-                'FINANCE': FinanceDocument,
-                'LOGISTICS': LogisticsDocument
-            }
-            document_class = department_document_class.get(user_profile.department, Document)
-            self.instance.__class__ = document_class
-            self._meta.model = document_class  # zmieniamy model formularza dynamicznie
-            
-            # Usuń pole 'folder', jeśli model nie ma tego pola
-            if not hasattr(document_class, 'folder'):
-                self.fields.pop('folder', None)
+        department_document_class = {
+            'IT': ITDocument,
+            'Sales': SalesDocument,
+            'HR': HRDocument,
+            'FINANCE': FinanceDocument,
+            'LOGISTICS': LogisticsDocument
+        }
+        document_class = department_document_class.get(user_profile.department, Document)
+        self.instance.__class__ = document_class
+        self._meta.model = document_class  # Dynamically change the form model
 
+        if not hasattr(document_class, 'folder'):
+            self.fields.pop('folder', None)
+
+        if user_profile:
+            self.fields['public_key'].queryset = PublicKey.objects.filter(profile=user_profile)
 
 class UserRoleForm(forms.ModelForm):
     
@@ -89,48 +107,42 @@ class SendDocumentForm(forms.ModelForm):
     recipient = forms.ModelChoiceField(
         queryset=Profile.objects.all(),
         label="Recipient",
-        required=True,
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        required=True
     )
     public_key = forms.ModelChoiceField(
-        queryset=PublicKey.objects.all(),
+        queryset=PublicKey.objects.none(),  # Zmienione na none, będziemy filtrować w __init__
         label="Public Key",
-        required=False,  # Zależy od wymagań, czy klucz ma być wymagany
         widget=forms.Select(attrs={'class': 'form-control'}),
-        help_text="Select the public key to include with the document."
+        help_text="Select the public key to include with the document.",
+        required=True
     )
+    title = forms.CharField(
+        label="Title",
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+        required=True
+    )
+    file = forms.FileField(
+        label="Document File",
+        widget=forms.FileInput(attrs={'class': 'form-control'}),
+        required=True
+    )
+    
 
     class Meta:
-        model = Document  # Ustaw ogólny model Document jeżeli jest nieabstrakcyjny, w przeciwnym razie ustal poniżej
-        fields = ('recipient', 'public_key',)  # Dodano public_key do pól
+        model = SendDocument  # Ustawienie modelu Document jest teraz zbędne tutaj
+        fields = ('title', 'file', 'recipient', 'public_key')
 
     def __init__(self, *args, **kwargs):
         user_profile = kwargs.pop('user_profile', None)
         super(SendDocumentForm, self).__init__(*args, **kwargs)
-
-        # Zależnie od departamentu ustaw odpowiedni model dokumentów
-        department_documents = {
-            'HR': HRDocument.objects.all(),
-            'IT': ITDocument.objects.all(),
-            'SALES': SalesDocument.objects.all(),
-            'FINANCE': FinanceDocument.objects.all(),
-            'LOGISTICS': LogisticsDocument.objects.all(),
-        }
-
-        # Ustaw queryset dla dokumentów zgodnie z departamentem profilu użytkownika
-        if user_profile and user_profile.department in department_documents:
-            self.fields['document'] = forms.ModelChoiceField(
-                queryset=department_documents[user_profile.department],
-                label="Select Document",
-                widget=forms.Select(attrs={'class': 'form-control'})
-            )
-        else:
-            # Jeżeli profil nie ma przypisanego departamentu, nie pokazuj dokumentów
-            self.fields['document'] = forms.ModelChoiceField(
-                queryset=Document.objects.none(),  # Zakładając, że Document nie jest abstrakcyjny
-                label="Select Document",
-                widget=forms.Select(attrs={'class': 'form-control'})
-            )
+        
+        if user_profile:
+            print("działaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaam")
+            self.fields['public_key'].queryset = PublicKey.objects.filter(profile=user_profile)
+            print(PublicKey.objects.filter(key=user_profile))
+            print("public key", self.fields['public_key'].queryset)
+            
 
 class PublicKeyForm(forms.ModelForm):
     class Meta:

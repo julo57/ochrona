@@ -11,7 +11,7 @@ from django.conf import settings
 from django.contrib import messages
 
 from .forms import PublicKeyForm
-
+from .models import SendDocument
 
 
 def home(request):
@@ -56,40 +56,32 @@ def logout_view(request):
 
 def document_upload(request):
     user_profile = get_object_or_404(Profile, id=request.session.get('user_id'))
+    document_mapping = {
+        'HR': HRDocument,
+        'Sales': SalesDocument,
+        'IT': ITDocument,
+        'FINANCE': FinanceDocument,
+        'LOGISTICS': LogisticsDocument
+    }
 
-    if user_profile.department == 'HR':
-        DocumentModel = HRDocument
-    elif user_profile.department == 'Sales':
-        DocumentModel = SalesDocument
-    elif user_profile.department == 'IT':
-        DocumentModel = ITDocument
-    elif user_profile.department == 'FINANCE':
-        DocumentModel = FinanceDocument
-    elif user_profile.department == 'LOGISTICS':
-        DocumentModel = LogisticsDocument
-
-    else:
+    DocumentModel = document_mapping.get(user_profile.department)
+    if not DocumentModel:
+        messages.error(request, "Nieznany departament")
         return HttpResponse("Nieznany departament", status=400)
     
-   
-
-    DocumentForm = modelform_factory(DocumentModel, fields=['title', 'file','is_public'])
+    DocumentForm = modelform_factory(DocumentModel, fields=['title', 'file', 'is_public'])
 
     if request.method == 'POST':
         form = DocumentForm(request.POST, request.FILES)
         if form.is_valid():
             document = form.save(commit=False)
             document.author = user_profile
-
-            uploaded_file = request.FILES['file']
-            original_file_name = uploaded_file.name
-        
-            document.file = uploaded_file
             document.save()
-
-            
-            messages.success(request, "Plik został zapisany. Proszę zaszyfrować plik za pomocą Kleopatry.")
+            messages.success(request, "Dokument został pomyślnie przesłany.")
             return redirect('documents')
+        else:
+            for error in form.errors.values():
+                messages.error(request, error)
     else:
         form = DocumentForm()
 
@@ -371,7 +363,6 @@ def document_replace(request, document_id):
 
 def send_document(request):
     user_profile = get_object_or_404(Profile, id=request.session.get('user_id'))
-
     department_to_model = {
         'HR': HRDocument,
         'Sales': SalesDocument,
@@ -383,42 +374,29 @@ def send_document(request):
     DocumentModel = department_to_model.get(user_profile.department)
     if not DocumentModel:
         return HttpResponse("Nieznany departament", status=400)
-    
-    DocumentForm = modelform_factory(DocumentModel, fields=['title', 'file', 'recipient','public_key'])
+
     if request.method == 'POST':
-        form = DocumentForm(request.POST, request.FILES)
+        form = SendDocumentForm(request.POST, request.FILES, user_profile=user_profile)
         if form.is_valid():
             document = form.save(commit=False)
             document.author = user_profile
+            document.public_key = form.cleaned_data['public_key']  # Przypisanie wybranego klucza publicznego
+            print("klucz publiczny",document.public_key)
             document.save()
-            return redirect('home')  # przekierowanie do strony sukcesu
+            return redirect('home')
     else:
-        form = DocumentForm()
+        form = SendDocumentForm(user_profile=user_profile)
 
     return render(request, 'base/send_document.html', {'form': form})
-
 
 def list_received_documents(request):
     user_profile = get_object_or_404(Profile, id=request.session.get('user_id'))  # Pobranie profilu zalogowanego użytkownika
 
-    # Mapowanie departamentu na odpowiedni model dokumentu
-    department_to_document_model = {
-        'HR': HRDocument,
-        'Sales': SalesDocument,
-        'IT': ITDocument,
-        'FINANCE': FinanceDocument,
-        'LOGISTICS': LogisticsDocument,
-    }
-
-    DocumentModel = department_to_document_model.get(user_profile.department)
-
-    if not DocumentModel:
-        return HttpResponse("Nieznany departament", status=400)
-
     # Pobieranie dokumentów przypisanych do profilu użytkownika
-    documents = DocumentModel.objects.filter(recipient=user_profile)
-
+    documents = SendDocument.objects.filter(recipient=user_profile)
+    
     return render(request, 'base/received_documents.html', {'documents': documents})
+
 
 def upload_public_key(request):
     user_profile = get_object_or_404(Profile, id=request.session.get('user_id'))

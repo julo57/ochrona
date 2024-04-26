@@ -1,5 +1,7 @@
 from django.db import models
 from django.utils import timezone
+from django.core.validators import FileExtensionValidator
+
 class Profile(models.Model):
     USER_ROLES = (
         ('superadmin', 'Super Administrator'),
@@ -25,14 +27,28 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.username
+    
+class PublicKey(models.Model):
+    key = models.TextField()  # Zaszyfrowany klucz publiczny
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='public_keys',default="Janek")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return self.profile.username
 
 class Document(models.Model):
     title = models.CharField(max_length=255)
-    file = models.FileField(upload_to='documents/')  
+    file = models.FileField(
+        upload_to='documents/',
+        validators=[FileExtensionValidator(allowed_extensions=['gpg'])]
+    ) 
     author = models.ForeignKey(Profile, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     is_public = models.BooleanField(default=False)
-    public_key = models.ForeignKey('PublicKey', on_delete=models.SET_NULL, null=True, blank=True)
+    public_key = models.ForeignKey(PublicKey, on_delete=models.SET_NULL, null=True, blank=True)
+    
     class Meta:
         abstract = True
 
@@ -72,14 +88,20 @@ class LogisticsDocument(Document):
     last_replaced_at = models.DateTimeField(null=True, blank=True)
     recipient = models.ForeignKey(Profile, related_name='received_documents_LOGISTIC', on_delete=models.SET_NULL, null=True, blank=True)
 
-
-
-class PublicKey(models.Model):
-    
-    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='public_keys',default="Janek")
-    key = models.TextField()  # Zaszyfrowany klucz publiczny
+class SendDocument(models.Model):
+    title = models.CharField(max_length=255)
+    file = models.FileField(
+        upload_to='documents/',
+        validators=[FileExtensionValidator(allowed_extensions=['gpg'])]
+    ) 
+    author = models.ForeignKey(Profile, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
-    last_used = models.DateTimeField(null=True, blank=True)
-
+    recipient = models.ForeignKey(Profile, related_name='received_documents', on_delete=models.SET_NULL, null=True, blank=True)
+    public_key = models.ForeignKey(PublicKey, on_delete=models.SET_NULL, null=True, blank=True)
+    is_public = models.BooleanField(default=False)
+    
     def __str__(self):
-        return self.profile.username
+        return self.title
+
+
+
