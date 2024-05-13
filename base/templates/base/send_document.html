@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="{% static 'css/send.css' %}">
 </head>
 <body>
+    <a href="{% url 'home' %}" class="home-button">Strona główna</a> 
     <div class="form-container">
         <form method="post" enctype="multipart/form-data" class="custom-form">
             {% csrf_token %}

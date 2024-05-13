@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="{% static 'css/document_list.css' %}">
 </head>
 <body>
+  <a href="{% url 'home' %}" class="home-button">Strona główna</a> 
     <h2>My Documents</h2>
     <ul>
       {% for document in documents %}
