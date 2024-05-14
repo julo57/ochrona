@@ -1,17 +1,29 @@
-<!-- document_list.html -->
+{% load static %}
 
-<h2>My Documents</h2>
-<ul>
-  {% for document in documents %}
-    <li>
-      {{ document.title }} (uploaded on {{ document.created_at|date:"Y-m-d H:i" }})<p>Ostatnio edytowany przez: {{ document.last_edited_by.username }} dnia {{ document.updated_at }}</p>
-      <p>Ostatnio zastąpiony przez: {{ document.last_replaced_by.username }} dnia {{ document.updated_at|date:"Y-m-d H:i" }}</p>
-      <p>Ostatnio zastąpiony przez: {{ document.last_replaced_by.username }} dnia {{ document.last_replaced_at|date:"Y-m-d H:i" }}</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Documents</title>
+    <link rel="stylesheet" href="{% static 'css/document_list.css' %}">
+</head>
+<body>
+  <a href="{% url 'home' %}" class="home-button">Strona główna</a> 
+    <h2>My Documents</h2>
+    <ul>
+      {% for document in documents %}
+        <li>
+          {{ document.title }} (uploaded on {{ document.created_at|date:"Y-m-d H:i" }})
 
-      - <a href="{% url 'document_edit' document.id %}">Edit</a>
-      <a href="{{ document.file.url }}" download="{{ document.file.name }}">Pobierz</a>
-      <a href="{% url 'document_replace' document.id %}">Zastąp</a>
+          {% if document.last_replaced_by %}
+          <p>Ostatnio zastąpiony przez: {{ document.last_replaced_by.username }} dnia {{ document.last_replaced_at|date:"Y-m-d H:i" }}</p>
+          {% endif %}
 
-    </li>
-  {% endfor %}
-</ul>
+          <a href="{{ document.file.url }}" download="{{ document.file.name }}">Pobierz</a>
+          <a href="{% url 'document_replace' document.id %}">Zastąp</a>
+        </li>
+      {% endfor %}
+    </ul>
+</body>
+</html>

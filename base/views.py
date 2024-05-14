@@ -91,7 +91,7 @@ def document_upload(request):
 def get_document_model(user_profile):
     print("Wywołanie get_document_model z profile:", user_profile)
     
-    if user_profile.role in ['superadmin', 'admin']:
+    if user_profile.role in ['superadmin']:
         # Jeśli jest adminem, zwróć domyślny model
         return SalesDocument
     elif user_profile.department == 'HR':

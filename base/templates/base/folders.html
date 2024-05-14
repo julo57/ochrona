@@ -1,7 +1,7 @@
 
 {% load static %}
 <link rel="stylesheet" href="{% static 'css/folder.css' %}">
-
+<a href="{% url 'home' %}" class="home-button">Strona główna</a> 
 <div class="folder-list">
     {% for folder in folders %}
         <div class="folder">

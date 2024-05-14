@@ -1,4 +1,4 @@
-
+<a href="{% url 'home' %}" class="home-button">Strona główna</a> 
 <h2>Zmień rolę użytkownika: {{ user.username }}</h2>
 <form method="post">
   {% csrf_token %}
