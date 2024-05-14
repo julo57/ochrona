@@ -4,7 +4,7 @@ from .forms import ProfileForm, LoginForm,DocumentForm,UserRoleForm,SendDocument
 from .models import Profile, HRDocument, ITDocument, SalesDocument, FinanceDocument, LogisticsDocument
 from django.forms.models import modelform_factory
 from django.contrib.auth.hashers import check_password
-from docx import Document as DocxDocument
+
 import subprocess
 import os
 from django.conf import settings
