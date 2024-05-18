@@ -1,5 +1,5 @@
 from django.forms import ModelForm
-from .models import Profile , HRDocument, SalesDocument, ITDocument ,Document, FinanceDocument, LogisticsDocument, PublicKey
+from .models import Profile , HRDocument, SalesDocument, ITDocument ,Document, FinanceDocument, LogisticsDocument, PublicKey,SendKey
 from django import forms
 from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import make_password
@@ -11,16 +11,13 @@ class LoginForm(forms.Form):
     username = forms.CharField(label='Username', max_length=100)
     password = forms.CharField(label='Password', widget=forms.PasswordInput)
 
-
-class ProfileForm(ModelForm):
+class ProfileForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput(), label="Password", min_length=8)
     confirm_password = forms.CharField(widget=forms.PasswordInput(), label="Confirm Password")
     
-
     class Meta:
         model = Profile
         fields = ['username', 'email', 'password']
-
 
     def clean_email(self):
         email = self.cleaned_data.get("email")
@@ -47,7 +44,6 @@ class ProfileForm(ModelForm):
         if commit:
             user.save()
         return user
-
 
 class DocumentForm(forms.ModelForm):
     FOLDER_CHOICES = (
@@ -103,25 +99,56 @@ class UserRoleForm(forms.ModelForm):
         model = Profile
         fields = ['role', 'department']
 
-class SendDocumentForm(forms.ModelForm):
+class SendKeyForm(forms.ModelForm):
     recipient = forms.ModelChoiceField(
         queryset=Profile.objects.all(),
         label="Recipient",
         widget=forms.Select(attrs={'class': 'form-control'}),
-        required=False  # Możesz ustawić na False, jeśli obecność tego pola nie jest wymagana
+        required=True
+    )
+    public_key = forms.ModelChoiceField(
+        queryset=PublicKey.objects.none(),
+        label="Public Key",
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        required=True
+    )
+    
+    class Meta:
+        model = SendKey
+        fields = ['recipient', 'public_key']
+
+    def __init__(self, *args, **kwargs):
+        user_profile = kwargs.pop('user_profile', None)
+        super(SendKeyForm, self).__init__(*args, **kwargs)
+        if user_profile:
+            self.fields['public_key'].queryset = PublicKey.objects.filter(profile=user_profile)
+
+class SendDocumentForm(forms.ModelForm):
+    DEPARTMENT_CHOICES = (
+        ('HR', 'HR'),
+        ('Sales', 'Sales'),
+        ('IT', 'IT'),
+        ('FINANCE', 'Finance'),
+        ('LOGISTICS', 'Logistics')
+    )
+
+    department = forms.ChoiceField(
+        choices=DEPARTMENT_CHOICES,
+        label="Department",
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        required=False  # Make department optional
+    )
+    recipient = forms.ModelChoiceField(
+        queryset=Profile.objects.all(),
+        label="Recipient",
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        required=False
     )
     recipients = forms.ModelMultipleChoiceField(
         queryset=Profile.objects.all(),
         label="Additional Recipients",
         widget=forms.SelectMultiple(attrs={'class': 'form-control'}),
-        required=False  # Możesz ustawić na False, jeśli obecność tego pola nie jest wymagana
-    )
-    public_key = forms.ModelChoiceField(
-        queryset=PublicKey.objects.none(),  # Zmienione na none, będziemy filtrować w __init__
-        label="Public Key",
-        widget=forms.Select(attrs={'class': 'form-control'}),
-        help_text="Select the public key to include with the document.",
-        required=True
+        required=False
     )
     title = forms.CharField(
         label="Title",
@@ -133,23 +160,19 @@ class SendDocumentForm(forms.ModelForm):
         widget=forms.FileInput(attrs={'class': 'form-control'}),
         required=True
     )
+    is_public = forms.BooleanField(
+        label="Is Public",
+        required=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
     
     class Meta:
         model = SendDocument
-        fields = ('title', 'file', 'recipient', 'recipients', 'public_key')
+        fields = ('title', 'file', 'department', 'recipient', 'recipients', 'is_public')
 
     def __init__(self, *args, **kwargs):
         user_profile = kwargs.pop('user_profile', None)
         super(SendDocumentForm, self).__init__(*args, **kwargs)
-
-        # Filtruj klucze publiczne dostępne dla danego profilu użytkownika
-        if user_profile:
-            self.fields['public_key'].queryset = PublicKey.objects.filter(profile=user_profile)
-
-        # Opcjonalnie możesz chcieć również filtrować dostępne profile dla obu pól odbiorców
-        self.fields['recipient'].queryset = Profile.objects.filter(department=user_profile.department)
-        self.fields['recipients'].queryset = Profile.objects.filter(department=user_profile.department)
-            
 
 class PublicKeyForm(forms.ModelForm):
     class Meta:
@@ -163,7 +186,32 @@ class PublicKeyForm(forms.ModelForm):
     def save(self, commit=True):
         instance = super(PublicKeyForm, self).save(commit=False)
         instance.profile = self.profile
-        
         if commit:
             instance.save()
         return instance
+
+class SendKeyForm(forms.ModelForm):
+    recipient = forms.ModelChoiceField(
+        queryset=Profile.objects.all(),
+        label="Recipient",
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        required=True
+    )
+    public_key = forms.ModelChoiceField(
+        queryset=PublicKey.objects.none(),
+        label="Public Key",
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        required=True
+    )
+    
+    class Meta:
+        model = SendKey
+        fields = ['recipient', 'public_key']
+
+    def __init__(self, *args, **kwargs):
+        user_profile = kwargs.pop('user_profile', None)
+        super(SendKeyForm, self).__init__(*args, **kwargs)
+        if user_profile:
+            self.fields['public_key'].queryset = PublicKey.objects.filter(profile=user_profile)
+
+    

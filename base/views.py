@@ -1,9 +1,10 @@
 from django.shortcuts import render, redirect ,get_object_or_404
 from django.http import HttpResponse
-from .forms import ProfileForm, LoginForm,DocumentForm,UserRoleForm,SendDocumentForm
-from .models import Profile, HRDocument, ITDocument, SalesDocument, FinanceDocument, LogisticsDocument
+from .forms import ProfileForm, LoginForm, PublicKeyForm, SendKeyForm, SendDocumentForm  # Correct imports
+from .models import Profile, PublicKey, SendKey, SendDocument, HRDocument, ITDocument, SalesDocument, FinanceDocument, LogisticsDocument
 from django.forms.models import modelform_factory
 from django.contrib.auth.hashers import check_password
+from django.core.mail import send_mail  # Add this import
 
 import subprocess
 import os
@@ -15,7 +16,6 @@ from .models import SendDocument
 
 
 def home(request):
-    # Twoja logika pozostaje bez zmian do momentu pomyślnego logowania
     if request.method == 'POST':
         form = LoginForm(request.POST)
         if form.is_valid():
@@ -23,13 +23,20 @@ def home(request):
             password = form.cleaned_data['password']
             try:
                 user = Profile.objects.get(username=username)
+                
+                if user.is_locked_out():
+                    return HttpResponse("Twoje konto jest zablokowane. Spróbuj ponownie później.", status=403)
+
                 if check_password(password, user.password):
+                    user.reset_login_attempts()
                     request.session['user_id'] = user.id
                     request.session['username'] = user.username
-                    
                     request.session['role'] = user.role
                     return redirect('home')
                 else:
+                    user.increment_login_attempts()
+                    if user.is_locked_out():
+                        send_alert_to_superadmin(user)  # Send alert to superadmin
                     return HttpResponse("Nieprawidłowa nazwa użytkownika lub hasło.", status=401)
             except Profile.DoesNotExist:
                 return HttpResponse("Nie znaleziono użytkownika.", status=404)
@@ -37,6 +44,16 @@ def home(request):
         form = LoginForm()
     return render(request, 'base/home.html', {'form': form})
 
+def send_alert_to_superadmin(user):
+    superadmins = Profile.objects.filter(role='superadmin')
+    for superadmin in superadmins:
+        send_mail(
+            'Alert: Multiple Failed Login Attempts',
+            f'The user {user.username} has been locked out after 3 failed login attempts.',
+            'from@example.com',
+            [superadmin.email],
+            fail_silently=False,
+        )
 def register(request):
     if request.method == 'POST':
         form = ProfileForm(request.POST)
@@ -255,10 +272,8 @@ def folder_detail(request, department):
     if not request.user.is_authenticated:
         return redirect('login')
     
-    # Pobranie profilu zalogowanego użytkownika
     user_profile = get_object_or_404(Profile, id=request.session.get('user_id'))
     
-    # Mapowanie nazwy departamentu na odpowiadający mu model dokumentu
     department_to_model = {
         'HR': HRDocument,
         'SALES': SalesDocument,
@@ -271,21 +286,21 @@ def folder_detail(request, department):
     if not DocumentModel:
         return HttpResponse("Nieznany departament", status=400)
 
-    # Sprawdzenie, czy użytkownik ma uprawnienia do przeglądania dokumentów danego departamentu
     if not (user_profile.role in ['superadmin', 'admin'] or user_profile.department == department):
         return HttpResponse("Brak dostępu", status=403)
     
-    # Filtracja dokumentów:
     if user_profile.role in ['superadmin', 'admin']:
-        # Admini i superadmini widzą wszystkie dokumenty w danym departamencie
         documents = DocumentModel.objects.all()
     else:
-        # Pozostali użytkownicy widzą tylko swoje dokumenty i publiczne dokumenty w danym departamencie
-        documents = DocumentModel.objects.filter(author=user_profile) | DocumentModel.objects.filter(is_public=True)
+        documents = DocumentModel.objects.filter(
+            models.Q(author=user_profile) | 
+            models.Q(is_public=True) |
+            models.Q(recipients=user_profile)
+        ).distinct()
 
-    template_name = f'base/departments/{department.lower()}.html'  # Dynamiczne tworzenie nazwy szablonu
-
+    template_name = f'base/departments/{department.lower()}.html'
     return render(request, template_name, {'department': department, 'documents': documents})
+
 
 
 def folders_view(request):
@@ -296,11 +311,11 @@ def folders_view(request):
     user = Profile.objects.get(id=user_id)
     
     if user.role in ['superadmin', 'admin']:
-        folders = ['IT', 'SALES', 'HR','FINANCE','LOGISTICS']  # Admini mają dostęp do wszystkich folderów
+        folders = ['HR', 'SALES', 'IT', 'FINANCE', 'LOGISTICS']  # Admins have access to all folders
     else:
-        folders = [user.department]  # Pracownicy mają dostęp tylko do swojego działu
+        folders = [user.department]  # Employees only have access to their own department
     
-    return render(request, 'folders.html', {'folders': folders})
+    return render(request, 'base/folders.html', {'folders': folders})
 
 
 
@@ -371,24 +386,40 @@ def send_document(request):
         'LOGISTICS': LogisticsDocument,
     }
 
-    DocumentModel = department_to_model.get(user_profile.department)
-    if not DocumentModel:
-        return HttpResponse("Nieznany departament", status=400)
-
     if request.method == 'POST':
         form = SendDocumentForm(request.POST, request.FILES, user_profile=user_profile)
         if form.is_valid():
-            document = form.save(commit=False)
-            document.author = user_profile
-            document.public_key = form.cleaned_data['public_key']  # Przypisanie wybranego klucza publicznego
-            document.save()  # Zapisujemy dokument przed przypisaniem relacji wiele-do-wielu
-            
-            # Obsługa wielu odbiorców
-            recipients = form.cleaned_data['recipients']
-            document.recipients.set(recipients)  # Ustawienie wielu odbiorców
-            
-            # Możesz tutaj dodać wiadomość o sukcesie lub podobną logikę.
+            department = form.cleaned_data['department']
+            DocumentModel = department_to_model.get(department, None)
+            if DocumentModel:
+                document = DocumentModel(
+                    title=form.cleaned_data['title'],
+                    file=form.cleaned_data['file'],
+                    author=user_profile,
+                    is_public=form.cleaned_data.get('is_public', False)
+                )
+                document.save()
+                
+                recipients = form.cleaned_data['recipients']
+                document.recipients.set(recipients)
+            else:
+                # If no department is selected, save as general SendDocument
+                document = SendDocument(
+                    title=form.cleaned_data['title'],
+                    file=form.cleaned_data['file'],
+                    author=user_profile,
+                    is_public=form.cleaned_data.get('is_public', False)
+                )
+                document.save()
+                
+                recipients = form.cleaned_data['recipients']
+                document.recipients.set(recipients)
+
+            messages.success(request, "Dokument został pomyślnie przesłany.")
             return redirect('home')
+        else:
+            for error in form.errors.values():
+                messages.error(request, error)
     else:
         form = SendDocumentForm(user_profile=user_profile)
 
@@ -411,8 +442,46 @@ def upload_public_key(request):
         form = PublicKeyForm(request.POST, profile=user_profile)
         if form.is_valid():
             form.save()
-            return redirect('home')  # Przekierowanie do strony głównej po pomyślnym dodaniu lub aktualizacji klucza
+            messages.success(request, "Klucz publiczny został pomyślnie przesłany.")
+            return redirect('home')
     else:
-        form = PublicKeyForm(profile=user_profile)  # Przekazanie profilu również przy tworzeniu pustego formularza
-
+        form = PublicKeyForm(profile=user_profile)
+    
     return render(request, 'base/upload_key.html', {'form': form})
+
+def send_key(request):
+    user_profile = get_object_or_404(Profile, id=request.session.get('user_id'))
+
+    if request.method == 'POST':
+        form = SendKeyForm(request.POST, user_profile=user_profile)
+        if form.is_valid():
+            send_key = form.save(commit=False)
+            send_key.sender = user_profile
+            send_key.save()
+            messages.success(request, "Klucz został pomyślnie wysłany.")
+            return redirect('home')
+        else:
+            for error in form.errors.values():
+                messages.error(request, error)
+    else:
+        form = SendKeyForm(user_profile=user_profile)
+
+    return render(request, 'base/send_key.html', {'form': form})
+
+
+def list_received_keys(request):
+    user_profile = get_object_or_404(Profile, id=request.session.get('user_id'))
+
+    keys = SendKey.objects.filter(recipient=user_profile).distinct()
+
+    return render(request, 'base/received_keys.html', {'keys': keys})
+
+def list_received_documents(request):
+    user_profile = get_object_or_404(Profile, id=request.session.get('user_id'))  # Pobranie profilu zalogowanego użytkownika
+
+    # Pobieranie dokumentów przypisanych do profilu użytkownika jako pojedynczego odbiorcę lub jako jednego z wielu odbiorców
+    documents = SendDocument.objects.filter(
+        Q(recipient=user_profile) | Q(recipients=user_profile)
+    ).distinct()
+
+    return render(request, 'base/received_documents.html', {'documents': documents})

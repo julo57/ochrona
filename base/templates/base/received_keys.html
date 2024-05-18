@@ -1,0 +1,37 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Odebrane Klucze</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <div class="container">
+        <h1>Odebrane Klucze</h1>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Nadawca</th>
+                    <th>Klucz</th>
+                    <th>Wysłano</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key in keys %}
+                <tr>
+                    <td>{{ key.sender.username }}</td>
+                    <td>{{ key.public_key.key|slice:":10" }}...</td>
+                    <td>{{ key.sent_at }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3">Nie odebrano jeszcze żadnych kluczy.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
